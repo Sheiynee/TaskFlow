@@ -15,6 +15,7 @@ export default function Users() {
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(null)
+  const [roleError, setRoleError] = useState(null)
 
   const isAdmin = currentUser?.role === 'admin'
 
@@ -26,11 +27,12 @@ export default function Users() {
 
   async function handleRoleChange(uid, role) {
     setSaving(uid)
+    setRoleError(null)
     try {
       await api.updateUserRole(uid, role)
       setUsers(prev => prev.map(u => u.uid === uid ? { ...u, role } : u))
     } catch (err) {
-      alert(err.message)
+      setRoleError(err.message || 'Failed to update role')
     } finally {
       setSaving(null)
     }
@@ -54,6 +56,12 @@ export default function Users() {
           Manage app-level roles for all registered accounts.
         </p>
       </div>
+
+      {roleError && (
+        <p className="mb-4 text-xs text-red-500 bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 rounded-xl px-3 py-2">
+          {roleError}
+        </p>
+      )}
 
       {loading ? (
         <div className="flex items-center justify-center py-16">

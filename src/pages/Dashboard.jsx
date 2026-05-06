@@ -3,13 +3,14 @@ import { useApp } from '../context/app-context'
 import { priorityBadge, statusDot, stripHtml } from '../constants'
 
 export default function Dashboard() {
-  const { projects, tasks, members, notes } = useApp()
+  const { projects, tasks, members, notes, loading } = useApp()
   const navigate = useNavigate()
 
   const openTasks = tasks.filter(t => t.status !== 'done' && !t.parentId)
   const doneTasks = tasks.filter(t => t.status === 'done' && !t.parentId)
   const inProgress = tasks.filter(t => t.status === 'in_progress' && !t.parentId)
-  const overdue = tasks.filter(t => t.dueDate && t.status !== 'done' && new Date(t.dueDate) < new Date())
+  const todayStr = new Date().toLocaleDateString('en-CA')
+  const overdue = tasks.filter(t => t.dueDate && t.status !== 'done' && t.dueDate < todayStr)
   const recentTasks = [...tasks]
     .filter(t => !t.parentId)
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
@@ -19,6 +20,38 @@ export default function Dashboard() {
     .slice(0, 4)
 
   const projectName = (id) => projects.find(p => p.id === id)?.name ?? '—'
+
+  if (loading) {
+    return (
+      <div className="px-4 py-6 sm:px-6 sm:py-8 lg:px-8 max-w-6xl w-full mx-auto">
+        <div className="mb-8">
+          <div className="h-7 w-32 bg-gray-200 dark:bg-zinc-800 rounded-lg animate-pulse mb-2" />
+          <div className="h-4 w-56 bg-gray-100 dark:bg-zinc-800/60 rounded animate-pulse" />
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-8">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-2xl p-4 shadow-sm">
+              <div className="h-8 w-10 bg-gray-200 dark:bg-zinc-800 rounded animate-pulse mb-2" />
+              <div className="h-3 w-16 bg-gray-100 dark:bg-zinc-800/60 rounded animate-pulse" />
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <div key={i} className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-2xl p-5 shadow-sm">
+              <div className="h-4 w-28 bg-gray-200 dark:bg-zinc-800 rounded animate-pulse mb-4" />
+              {Array.from({ length: 4 }).map((_, j) => (
+                <div key={j} className="flex items-center gap-3 py-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-gray-200 dark:bg-zinc-800 flex-shrink-0" />
+                  <div className="h-3.5 flex-1 bg-gray-100 dark:bg-zinc-800/60 rounded animate-pulse" />
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="px-4 py-6 sm:px-6 sm:py-8 lg:px-8 max-w-6xl w-full mx-auto">

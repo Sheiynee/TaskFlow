@@ -1,17 +1,17 @@
 import { useState } from 'react'
 import { useApp } from '../context/app-context'
 import Modal from '../components/Modal'
+import { inputCls } from '../constants'
 
 const COLORS = ['#2563eb', '#16a34a', '#d97706', '#ea580c', '#7c3aed', '#dc2626', '#0891b2', '#db2777']
 const EMPTY = { name: '', role: '', discordId: '', color: '#2563eb' }
-
-const inputCls = "w-full bg-gray-50 dark:bg-zinc-950 border border-gray-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-sm text-gray-900 dark:text-zinc-100 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-colors placeholder:text-gray-400 dark:placeholder:text-zinc-500"
 
 export default function Team() {
   const { members, tasks, addMember, editMember, removeMember } = useApp()
   const [modal, setModal] = useState(null)
   const [form, setForm] = useState(EMPTY)
   const [saving, setSaving] = useState(false)
+  const [confirmRemoveId, setConfirmRemoveId] = useState(null)
 
   function openCreate() { setForm(EMPTY); setModal({ mode: 'create' }) }
   function openEdit(m) {
@@ -92,14 +92,31 @@ export default function Team() {
                   >
                     <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M9.5 1.5a1.414 1.414 0 0 1 2 2L4 11H1.5V8.5L9.5 1.5Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/></svg>
                   </button>
-                  <button
-                    className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 dark:text-zinc-500 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-500 transition-colors"
-                    onClick={() => { if (confirm(`Remove ${m.name} from the team?`)) removeMember(m.id) }}
-                    aria-label={`Remove ${m.name}`}
-                    title="Remove"
-                  >
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1 1 11" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>
-                  </button>
+                  {confirmRemoveId === m.id ? (
+                    <span className="flex items-center gap-1">
+                      <button
+                        className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-red-500 text-white hover:bg-red-600 transition-colors"
+                        onClick={() => { removeMember(m.id); setConfirmRemoveId(null) }}
+                      >
+                        Remove
+                      </button>
+                      <button
+                        className="text-[10px] font-medium px-1.5 py-0.5 rounded-md border border-gray-200 dark:border-zinc-700 text-gray-500 dark:text-zinc-400 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors"
+                        onClick={() => setConfirmRemoveId(null)}
+                      >
+                        Cancel
+                      </button>
+                    </span>
+                  ) : (
+                    <button
+                      className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 dark:text-zinc-500 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-500 transition-colors"
+                      onClick={() => setConfirmRemoveId(m.id)}
+                      aria-label={`Remove ${m.name}`}
+                      title="Remove"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1 1 11" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

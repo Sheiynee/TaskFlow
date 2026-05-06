@@ -3,10 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/app-context'
 import Modal from '../components/Modal'
 import { canDo } from '../roles'
+import { inputCls } from '../constants'
 
 const COLORS = ['#2563eb', '#16a34a', '#d97706', '#ea580c', '#7c3aed', '#dc2626', '#0891b2', '#db2777']
-
-const inputCls = "w-full bg-gray-50 dark:bg-zinc-950 border border-gray-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-sm text-gray-900 dark:text-zinc-100 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-colors placeholder:text-gray-400 dark:placeholder:text-zinc-500"
 
 const EMPTY_FORM = { name: '', description: '', color: '#2563eb' }
 
@@ -16,6 +15,7 @@ export default function Projects() {
   const [modal, setModal] = useState(null)
   const [form, setForm] = useState(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null)
 
   function openCreate() { setForm(EMPTY_FORM); setModal({ mode: 'create' }) }
   function openEdit(p) {
@@ -37,10 +37,16 @@ export default function Projects() {
     }
   }
 
-  async function handleDelete(e, id) {
+  function handleDeleteClick(e, id) {
     e.stopPropagation()
-    if (!confirm('Delete this project and all its tasks?')) return
-    await removeProject(id)
+    setConfirmDeleteId(id)
+  }
+
+  async function handleDeleteConfirm(e) {
+    e.stopPropagation()
+    if (!confirmDeleteId) return
+    await removeProject(confirmDeleteId)
+    setConfirmDeleteId(null)
   }
 
   function taskStats(projectId) {
@@ -112,13 +118,30 @@ export default function Projects() {
                               </button>
                             )}
                             {canDo(myRole, 'admin') && (
-                              <button
-                                className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 dark:text-zinc-500 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-500 transition-colors"
-                                onClick={(e) => handleDelete(e, p.id)}
-                                title="Delete"
-                              >
-                                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1 1 11" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>
-                              </button>
+                              confirmDeleteId === p.id ? (
+                                <span className="flex items-center gap-1">
+                                  <button
+                                    className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-red-500 text-white hover:bg-red-600 transition-colors"
+                                    onClick={handleDeleteConfirm}
+                                  >
+                                    Delete
+                                  </button>
+                                  <button
+                                    className="text-[10px] font-medium px-1.5 py-0.5 rounded-md border border-gray-200 dark:border-zinc-700 text-gray-500 dark:text-zinc-400 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors"
+                                    onClick={e => { e.stopPropagation(); setConfirmDeleteId(null) }}
+                                  >
+                                    Cancel
+                                  </button>
+                                </span>
+                              ) : (
+                                <button
+                                  className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 dark:text-zinc-500 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-500 transition-colors"
+                                  onClick={e => handleDeleteClick(e, p.id)}
+                                  title="Delete"
+                                >
+                                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1 1 11" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>
+                                </button>
+                              )
                             )}
                           </div>
                         )

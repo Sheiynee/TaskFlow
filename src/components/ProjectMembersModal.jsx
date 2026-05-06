@@ -7,9 +7,12 @@ export default function ProjectMembersModal({ projectId, myRole, onClose }) {
   const [members, setMembers] = useState([])
   const [allUsers, setAllUsers] = useState([])
   const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState(null)
   const [addUid, setAddUid] = useState('')
   const [addRole, setAddRole] = useState('member')
   const [adding, setAdding] = useState(false)
+  const [actionError, setActionError] = useState(null)
+  const [confirmRemoveUid, setConfirmRemoveUid] = useState(null)
 
   const isAdmin = myRole === 'admin'
   const canAdd = canDo(myRole, 'manager')
@@ -17,6 +20,7 @@ export default function ProjectMembersModal({ projectId, myRole, onClose }) {
   useEffect(() => {
     Promise.all([api.getProjectMembers(projectId), api.getUsers()])
       .then(([m, u]) => { setMembers(m); setAllUsers(u) })
+      .catch(err => setFetchError(err.message || 'Failed to load members'))
       .finally(() => setLoading(false))
   }, [projectId])
 
@@ -26,6 +30,7 @@ export default function ProjectMembersModal({ projectId, myRole, onClose }) {
   async function handleAdd() {
     if (!addUid) return
     setAdding(true)
+    setActionError(null)
     try {
       await api.addProjectMember(projectId, { uid: addUid, role: addRole })
       const user = allUsers.find(u => u.uid === addUid)
@@ -37,28 +42,31 @@ export default function ProjectMembersModal({ projectId, myRole, onClose }) {
       }])
       setAddUid('')
     } catch (err) {
-      alert(err.message)
+      setActionError(err.message || 'Failed to add member')
     } finally {
       setAdding(false)
     }
   }
 
   async function handleChangeRole(uid, role) {
+    setActionError(null)
     try {
       await api.updateProjectMember(projectId, uid, { role })
       setMembers(prev => prev.map(m => m.uid === uid ? { ...m, role } : m))
     } catch (err) {
-      alert(err.message)
+      setActionError(err.message || 'Failed to update role')
     }
   }
 
   async function handleRemove(uid) {
-    if (!confirm('Remove this member from the project?')) return
+    setActionError(null)
     try {
       await api.removeProjectMember(projectId, uid)
       setMembers(prev => prev.filter(m => m.uid !== uid))
     } catch (err) {
-      alert(err.message)
+      setActionError(err.message || 'Failed to remove member')
+    } finally {
+      setConfirmRemoveUid(null)
     }
   }
 
@@ -68,8 +76,24 @@ export default function ProjectMembersModal({ projectId, myRole, onClose }) {
     <Modal title="Project Members" onClose={onClose} width="480px">
       {loading ? (
         <div className="py-8 text-center text-sm text-gray-400 dark:text-zinc-500">Loading…</div>
+      ) : fetchError ? (
+        <div className="py-8 text-center">
+          <p className="text-sm text-red-500 mb-3">{fetchError}</p>
+          <button
+            className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline"
+            onClick={() => { setFetchError(null); setLoading(true); Promise.all([api.getProjectMembers(projectId), api.getUsers()]).then(([m, u]) => { setMembers(m); setAllUsers(u) }).catch(err => setFetchError(err.message || 'Failed to load members')).finally(() => setLoading(false)) }}
+          >
+            Try again
+          </button>
+        </div>
       ) : (
         <div className="flex flex-col gap-3">
+          {actionError && (
+            <p className="text-xs text-red-500 bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 rounded-xl px-3 py-2">
+              {actionError}
+            </p>
+          )}
+
           {members.length === 0 && (
             <p className="text-sm text-gray-400 dark:text-zinc-500 text-center py-4">No members assigned yet.</p>
           )}
@@ -99,13 +123,30 @@ export default function ProjectMembersModal({ projectId, myRole, onClose }) {
                 </span>
               )}
               {isAdmin && (
-                <button
-                  className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors flex-shrink-0"
-                  onClick={() => handleRemove(m.uid)}
-                  title="Remove"
-                >
-                  <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1 1 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
-                </button>
+                confirmRemoveUid === m.uid ? (
+                  <span className="flex items-center gap-1">
+                    <button
+                      className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-red-500 text-white hover:bg-red-600 transition-colors"
+                      onClick={() => handleRemove(m.uid)}
+                    >
+                      Remove
+                    </button>
+                    <button
+                      className="text-[10px] font-medium px-1.5 py-0.5 rounded-md border border-gray-200 dark:border-zinc-700 text-gray-500 dark:text-zinc-400 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors"
+                      onClick={() => setConfirmRemoveUid(null)}
+                    >
+                      Cancel
+                    </button>
+                  </span>
+                ) : (
+                  <button
+                    className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors flex-shrink-0"
+                    onClick={() => setConfirmRemoveUid(m.uid)}
+                    title="Remove"
+                  >
+                    <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1 1 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                  </button>
+                )
               )}
             </div>
           ))}
@@ -138,7 +179,7 @@ export default function ProjectMembersModal({ projectId, myRole, onClose }) {
                   disabled={!addUid || adding}
                   className="px-3 py-2 text-sm font-medium rounded-xl bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 transition-colors"
                 >
-                  Add
+                  {adding ? 'Adding…' : 'Add'}
                 </button>
               </div>
             </div>

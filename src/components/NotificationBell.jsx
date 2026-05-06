@@ -16,10 +16,13 @@ export default function NotificationBell() {
     return () => document.removeEventListener('mousedown', handleOutside)
   }, [])
 
-  const now = new Date()
+  // Compare date strings directly (YYYY-MM-DD) against today in local time.
+  // Avoids the UTC-midnight parse issue where tasks due "today" appear overdue
+  // for users in UTC+ timezones.
+  const todayStr = new Date().toLocaleDateString('en-CA') // always YYYY-MM-DD
   const overdue = tasks.filter(
-    t => !t.parentId && t.status !== 'done' && t.dueDate && new Date(t.dueDate) < now
-  ).sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))
+    t => !t.parentId && t.status !== 'done' && t.dueDate && t.dueDate < todayStr
+  ).sort((a, b) => (a.dueDate < b.dueDate ? -1 : 1))
 
   const projectName = id => projects.find(p => p.id === id)?.name ?? '—'
 
